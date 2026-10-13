@@ -1,0 +1,7 @@
+# 构建产物
+nexus-perm.exe
+nexus-perm
+*.exe~
+
+# 运行时数据（含加密凭据，不要提交）
+data/

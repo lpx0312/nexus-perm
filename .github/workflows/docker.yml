@@ -1,0 +1,97 @@
+# ============================================================================
+# Nexus 权限管理平台 - Docker 镜像流水线
+# ============================================================================
+#
+# 构建多架构 OCI 镜像（linux/amd64 + linux/arm64 manifest list）并推送到
+# GitHub Container Registry (ghcr.io)，tag 规则：
+#   - latest                    每次 main/标签构建滚动更新
+#   - <git describe --tags>     如 v1.0.0 / <commit-sha>
+#
+# 推送仓库后自动触发；也可在 Actions 页手动触发（workflow_dispatch）。
+# 无需额外 Secret：GHCR 使用内置的 github.token（需 packages: write 权限）。
+#
+# 本地等价命令：
+#   docker buildx build --platform linux/amd64,linux/arm64 \
+#     -t ghcr.io/<owner>/nexus-perm:latest --push .
+# ============================================================================
+
+name: docker
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+    paths-ignore:
+      - '**.md'
+      - '.github/**'
+      - 'docs/**'
+  workflow_dispatch:
+
+# 同一分支/标签的新推送取消旧构建
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    name: 构建并推送多架构镜像
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          # git describe 需要完整历史与 tag
+          fetch-depth: 0
+
+      - name: 计算镜像版本号
+        id: version
+        run: |
+          VERSION=$(git describe --tags --always 2>/dev/null || echo "dev")
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "镜像版本: ${VERSION}"
+
+      - name: 设置 QEMU（arm64 模拟）
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: 设置 Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 登录 GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 构建并推送多架构镜像
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            GOPROXY=https://proxy.golang.org,direct
+          provenance: false
+          sbom: false
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 输出镜像信息
+        run: |
+          echo "多架构镜像推送完成 (linux/amd64, linux/arm64)"
+          echo "  ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+          echo "  ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}"

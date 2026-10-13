@@ -1,0 +1,14 @@
+# 构建产物与本地数据（含加密凭据，禁止进入镜像上下文）
+nexus-perm
+nexus-perm.exe
+nexus-perm.exe~
+data/
+
+# 开发/CI 文件
+.git
+.github
+.gitignore
+.dockerignore
+Dockerfile
+README.md
+.playwright-cli

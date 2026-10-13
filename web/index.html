@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus 权限管理平台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%234f46e5'/%3E%3Ctext x='16' y='22' font-size='18' font-weight='bold' fill='white' text-anchor='middle' font-family='Arial'%3EN%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #f1f5f9; --card: #ffffff; --border: #e2e8f0; --text: #0f172a;
+    --muted: #64748b; --primary: #4f46e5; --primary-hover: #4338ca;
+    --primary-soft: #eef2ff; --ro: #2563eb; --upload: #059669; --full: #d97706;
+    --danger: #dc2626; --danger-soft: #fef2f2; --ok-soft: #ecfdf5; --warn-soft: #fffbeb;
+    --ok-text: #065f46; --warn-text: #92400e; --danger-text: #991b1b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+         background: var(--bg); color: var(--text); font-size: 14px; }
+  header { background: linear-gradient(120deg, #312e81, #4f46e5 60%, #6366f1);
+           color: #fff; padding: 13px 24px; display: flex; align-items: center;
+           gap: 16px; box-shadow: 0 1px 10px rgba(15,23,42,.25);
+           position: sticky; top: 0; z-index: 20; }
+  header .logo { width: 30px; height: 30px; border-radius: 8px; background: rgba(255,255,255,.18);
+                 display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  header h1 { font-size: 17px; font-weight: 650; letter-spacing: .2px; }
+  header .sub { font-size: 12px; opacity: .72; margin-top: 1px; }
+  header .spacer { flex: 1; }
+  header .status-line { font-size: 12px; opacity: .9; display: flex; align-items: center; gap: 6px; }
+  select, input[type=text], input[type=password], input[type=email] {
+    padding: 7px 10px; border: 1px solid var(--border); border-radius: 7px;
+    background: #fff; color: var(--text); outline: none; font-size: 13px; }
+  select:focus, input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+  button { font: inherit; font-size: 13px; padding: 7px 13px; border: none; border-radius: 7px;
+           cursor: pointer; background: var(--primary); color: #fff; font-weight: 550;
+           transition: background .15s, transform .05s; }
+  button:hover { background: var(--primary-hover); }
+  button:active { transform: translateY(1px); }
+  button.ghost { background: #fff; color: var(--text); border: 1px solid var(--border); }
+  button.ghost:hover { background: #f8fafc; border-color: #cbd5e1; }
+  button.danger { background: var(--danger); }
+  button.danger:hover { background: #b91c1c; }
+  button.small { padding: 4px 9px; font-size: 12px; border-radius: 6px; }
+  button.lvl-ro { background: var(--ro); } button.lvl-upload { background: var(--upload); }
+  button.lvl-full { background: var(--full); }
+  nav { background: var(--card); border-bottom: 1px solid var(--border); padding: 6px 20px;
+        display: flex; gap: 2px; position: sticky; top: 57px; z-index: 10; overflow-x: auto; }
+  nav button { background: none; color: var(--muted); border-radius: 7px; padding: 8px 14px;
+               font-weight: 550; white-space: nowrap; }
+  nav button:hover { color: var(--text); background: #f1f5f9; }
+  nav button.active { color: var(--primary); background: var(--primary-soft); }
+  main { padding: 18px 20px; max-width: 1440px; margin: 0 auto; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+          padding: 16px 18px; margin-bottom: 14px; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+  .card > h2 { font-size: 14.5px; margin-bottom: 12px; display: flex; align-items: center;
+               gap: 8px; flex-wrap: wrap; }
+  .card > h2 .hint { font-size: 12px; color: var(--muted); font-weight: 400; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border);
+           font-size: 13px; }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; background: #f8fafc;
+       position: sticky; top: 0; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #f8fafc; }
+  .form-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .form-row input[type=text], .form-row input[type=email], .form-row input[type=password] { flex: 1; min-width: 110px; }
+  .tag { display: inline-block; padding: 1px 7px; border-radius: 99px; font-size: 11px;
+         font-weight: 650; }
+  .tag.hosted { background: #dbeafe; color: #1e40af; }
+  .tag.proxy  { background: #fef3c7; color: #92400e; }
+  .tag.group  { background: #ede9fe; color: #5b21b6; }
+  .muted { color: var(--muted); font-size: 12px; }
+  .empty { text-align: center; color: var(--muted); padding: 30px 0; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+  .dot.on { background: #34d399; } .dot.off { background: #f87171; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px;
+          border-radius: 99px; font-size: 12px; font-weight: 650; }
+  .chip.ro { background: #dbeafe; color: var(--ro); }
+  .chip.upload { background: #d1fae5; color: var(--upload); }
+  .chip.full { background: #fef3c7; color: var(--full); }
+  .chip.none { background: #f1f5f9; color: var(--muted); }
+  .ok-box { background: var(--ok-soft); border: 1px solid #a7f3d0; color: var(--ok-text);
+            border-radius: 8px; padding: 9px 13px; margin-bottom: 10px; font-size: 13px; }
+  .warn-box { background: var(--warn-soft); border: 1px solid #fde68a; color: var(--warn-text);
+              border-radius: 8px; padding: 9px 13px; margin-bottom: 10px; font-size: 13px; }
+  .warn-box ul { margin-left: 18px; margin-top: 4px; }
+  .err-box { background: var(--danger-soft); border: 1px solid #fecaca; color: var(--danger-text);
+             border-radius: 8px; padding: 9px 13px; margin-bottom: 10px; font-size: 13px; }
+  /* ===== 权限管理：双栏 ===== */
+  .perms-layout { display: flex; gap: 14px; align-items: flex-start; }
+  .user-side { width: 230px; flex: none; }
+  .user-side .card { padding: 12px; }
+  .user-list { max-height: calc(100vh - 320px); overflow-y: auto; margin-top: 10px; }
+  .user-item { padding: 8px 10px; border-radius: 8px; cursor: pointer; display: flex;
+               align-items: center; gap: 8px; margin-bottom: 2px; border: 1px solid transparent; }
+  .user-item:hover { background: #f1f5f9; }
+  .user-item.active { background: var(--primary-soft); border-color: #c7d2fe; }
+  .user-item .nm { font-weight: 600; font-size: 13px; }
+  .user-item .cnt { margin-left: auto; font-size: 11px; color: var(--muted);
+                    background: #f1f5f9; padding: 1px 7px; border-radius: 99px; }
+  .user-item.active .cnt { background: #fff; }
+  .user-main { flex: 1; min-width: 0; }
+  .panel-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+                padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+  .panel-head .who { font-size: 15px; font-weight: 700; }
+  .summary { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  .toolbar .sep { width: 1px; height: 20px; background: var(--border); margin: 0 2px; }
+  .batch-bar { display: none; align-items: center; gap: 8px; background: var(--primary-soft);
+               border: 1px solid #c7d2fe; border-radius: 8px; padding: 7px 10px;
+               margin-bottom: 10px; font-size: 12.5px; flex-wrap: wrap; }
+  .batch-bar.show { display: flex; }
+  .repo-table { max-height: calc(100vh - 400px); overflow-y: auto; border: 1px solid var(--border);
+                border-radius: 9px; }
+  .repo-table table th { top: 0; z-index: 2; }
+  .repo-table td { padding: 6px 10px; }
+  .repo-table select { padding: 3px 7px; font-size: 12px; border-radius: 6px; min-width: 86px; }
+  .repo-name { font-weight: 600; font-size: 13px; }
+  .count-badge { background: #e0e7ff; color: #3730a3; font-size: 11px; font-weight: 700;
+                 padding: 1px 7px; border-radius: 99px; }
+  .tpl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 900px) { .tpl-grid { grid-template-columns: 1fr; } }
+  .action-item { display: block; padding: 8px 0; border-bottom: 1px dashed var(--border);
+                 font-size: 13px; }
+  .action-item:last-child { border-bottom: none; }
+  .action-item .head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .action-item .kind { font-family: Consolas, monospace; font-size: 12px; color: var(--primary);
+                       min-width: 100px; }
+  .action-item .target { font-weight: 600; min-width: 130px; }
+  .action-item .detail { color: var(--muted); font-size: 12px; }
+  .changes { margin: 8px 0 2px 12px; display: grid;
+             grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 4px 18px; }
+  .change-row { display: flex; align-items: center; gap: 7px; font-size: 12.5px; }
+  .change-row .ch-repo { font-weight: 600; min-width: 140px; }
+  .change-row .arrow { color: var(--muted); }
+  .extra-privs { margin: 6px 0 2px 12px; font-size: 12px; color: var(--warn-text);
+                 background: var(--warn-soft); border: 1px solid #fde68a; border-radius: 6px;
+                 padding: 6px 10px; }
+  .badge { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: #e0e7ff;
+           color: #3730a3; font-family: Consolas, monospace; }
+  /* ===== 登录 ===== */
+  body.logged-out header, body.logged-out nav, body.logged-out main { display: none !important; }
+  #login-overlay { position: fixed; inset: 0; z-index: 200; display: flex;
+                   flex-direction: column; align-items: center; justify-content: center;
+                   background: linear-gradient(135deg, #312e81, #4f46e5 55%, #6366f1);
+                   overflow: hidden; padding: 20px; }
+  #login-overlay[hidden] { display: none; }
+  .login-bg { position: absolute; inset: 0; pointer-events: none; }
+  .login-bg span { position: absolute; border-radius: 50%; filter: blur(80px); }
+  .login-bg .s1 { width: 500px; height: 500px; background: #a5b4fc; opacity: .28;
+                  top: -150px; right: -100px; }
+  .login-bg .s2 { width: 400px; height: 400px; background: #6366f1; opacity: .35;
+                  bottom: -120px; left: -80px; }
+  .login-bg .s3 { width: 260px; height: 260px; background: #34d399; opacity: .14;
+                  top: 40%; left: 58%; }
+  .login-card { position: relative; width: 100%; max-width: 400px; background: #fff;
+                border-radius: 14px; padding: 36px 34px 28px;
+                box-shadow: 0 24px 60px rgba(0,0,0,.35); }
+  .login-head { text-align: center; margin-bottom: 24px; }
+  .login-logo { width: 54px; height: 54px; border-radius: 14px; margin: 0 auto 14px;
+                background: linear-gradient(135deg, #4f46e5, #818cf8); color: #fff;
+                display: flex; align-items: center; justify-content: center;
+                font-size: 24px; font-weight: 700; }
+  .login-head h2 { font-size: 21px; font-weight: 700; margin-bottom: 6px; }
+  .login-head p { font-size: 13px; color: var(--muted); }
+  .login-card input[type=text], .login-card input[type=password] {
+    width: 100%; padding: 10px 12px; font-size: 14px; margin-bottom: 12px; }
+  .login-options { display: flex; justify-content: space-between; align-items: center;
+                   margin-bottom: 16px; font-size: 13px; color: var(--muted); }
+  .login-options label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .login-btn { width: 100%; padding: 11px; font-size: 15px; font-weight: 650;
+               border-radius: 8px; }
+  .login-btn:disabled { opacity: .65; cursor: not-allowed; }
+  .login-error { display: none; background: var(--danger-soft); border: 1px solid #fecaca;
+                 color: var(--danger-text); border-radius: 8px; padding: 9px 12px;
+                 margin-bottom: 14px; font-size: 13px; }
+  .login-error.show { display: block; }
+  .login-foot { position: relative; margin-top: 22px; font-size: 12px;
+                color: rgba(255,255,255,.65); text-align: center; }
+  .user-chip { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,.14);
+               padding: 5px 12px; border-radius: 99px; font-size: 13px; cursor: pointer;
+               border: 1px solid rgba(255,255,255,.18); }
+  .user-chip:hover { background: rgba(255,255,255,.24); }
+  .user-chip .avatar { width: 22px; height: 22px; border-radius: 50%; background: #fff;
+                       color: var(--primary); display: flex; align-items: center;
+                       justify-content: center; font-size: 12px; font-weight: 700; }
+  .user-chip .caret { font-size: 10px; opacity: .8; }
+  .header-btn { background: rgba(255,255,255,.16); padding: 6px 12px; border-radius: 7px;
+                font-size: 12.5px; }
+  .header-btn:hover { background: rgba(255,255,255,.28); }
+  .user-menu { position: relative; }
+  .user-dropdown { position: absolute; right: 0; top: calc(100% + 8px); width: 210px;
+                   background: #fff; border: 1px solid var(--border); border-radius: 10px;
+                   box-shadow: 0 12px 32px rgba(15,23,42,.18); padding: 6px; z-index: 50; }
+  .user-dropdown .ud-head { padding: 8px 10px 10px; font-size: 12px; color: var(--muted);
+                            border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+  .user-dropdown button { display: flex; width: 100%; align-items: center; gap: 8px;
+                          background: none; color: var(--text); border: none; text-align: left;
+                          padding: 8px 10px; border-radius: 7px; font-size: 13px; font-weight: 500; }
+  .user-dropdown button:hover { background: #f1f5f9; }
+  .user-dropdown button.danger-item { color: var(--danger); }
+  .user-dropdown button.danger-item:hover { background: var(--danger-soft); }
+  .pwd-modal-fields input { display: block; width: 100%; margin-bottom: 10px; }
+  .prompt-modal-fields input { display: block; width: 100%; margin-bottom: 4px; }
+  .prompt-modal-fields .pm-hint { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+  .badge.warn { background: #fef3c7; color: #92400e; }
+  .back-link { font-size: 12px; color: var(--primary); cursor: pointer; font-weight: 500;
+               margin-right: 8px; }
+  .back-link:hover { text-decoration: underline; }
+  /* 模态确认框（替代原生 confirm，避免内嵌浏览器拦截对话框） */
+  .modal-mask { position: fixed; inset: 0; background: rgba(15,23,42,.45);
+                display: flex; align-items: center; justify-content: center; z-index: 100; }
+  /* 注意：.modal-mask 的 display:flex 会覆盖 hidden 属性的 UA 默认样式，
+     必须显式声明 [hidden] 时隐藏，否则模态框会常驻页面 */
+  .modal-mask[hidden] { display: none; }
+  .modal { background: #fff; border-radius: 12px; padding: 20px; width: 400px;
+           max-width: calc(100vw - 40px); box-shadow: 0 20px 50px rgba(0,0,0,.25); }
+  .modal-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+  .modal-body { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  .pending-banner { background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+                    border: 1px solid #c7d2fe; border-radius: 10px; padding: 12px 16px;
+                    margin-bottom: 12px; }
+  .pending-banner .t { font-weight: 700; color: #3730a3; font-size: 14px; margin-bottom: 4px; }
+  .pending-banner .d { font-size: 12.5px; color: #4338ca; }
+  .btn-primary-lg { padding: 9px 20px; font-size: 14px; font-weight: 650;
+                    box-shadow: 0 2px 8px rgba(79,70,229,.35); }
+</style>
+</head>
+<body class="logged-out">
+
+<header>
+  <div class="logo">&#9632;</div>
+  <div>
+    <h1>Nexus 权限管理平台</h1>
+    <div class="sub">按用户维护仓库权限 · 模板批量授权 · 一键下发</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="status-line" id="inst-status">未选择实例</div>
+  <select id="instance-select" style="min-width:190px"><option value="">— 选择 Nexus 实例 —</option></select>
+  <div class="user-menu">
+    <div class="user-chip" id="user-chip" onclick="toggleUserMenu(event)" title="账号菜单">
+      <span class="avatar" id="user-avatar">A</span>
+      <span id="current-username">-</span>
+      <span class="caret">&#9662;</span>
+    </div>
+    <div class="user-dropdown" id="user-dropdown" hidden>
+      <div class="ud-head">已登录：<b id="ud-username">-</b></div>
+      <button onclick="openPlatformUsers()">&#128100; 平台用户管理</button>
+      <button onclick="openChangePassword()">&#128273; 修改密码</button>
+      <button class="danger-item" onclick="doLogout()">&#9200; 退出登录</button>
+    </div>
+  </div>
+</header>
+
+<nav id="tabs">
+  <button data-tab="instances" class="active">实例</button>
+  <button data-tab="repos">仓库</button>
+  <button data-tab="users">用户</button>
+  <button data-tab="perms">权限管理</button>
+  <button data-tab="templates">权限模板</button>
+  <button data-tab="sync">同步下发</button>
+  <button data-tab="audit">审计日志</button>
+</nav>
+
+<!-- 登录页 -->
+<div id="login-overlay">
+  <div class="login-bg"><span class="s1"></span><span class="s2"></span><span class="s3"></span></div>
+  <div class="login-card">
+    <div class="login-head">
+      <div class="login-logo">N</div>
+      <h2>Nexus 权限管理平台</h2>
+      <p>登录以继续</p>
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <input type="text" id="login-username" placeholder="用户名" autocomplete="username"
+           onkeydown="if(event.key==='Enter')doLogin()">
+    <input type="password" id="login-password" placeholder="密码" autocomplete="current-password"
+           onkeydown="if(event.key==='Enter')doLogin()">
+    <div class="login-options">
+      <label><input type="checkbox" id="login-remember"> 记住登录状态（7 天）</label>
+    </div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">登 录</button>
+  </div>
+  <div class="login-foot">Nexus Repository Manager 3 权限管理平台</div>
+</div>
+
+<main>
+  <!-- 确认模态框（替代原生 confirm：内嵌浏览器可能拦截原生对话框） -->
+  <div id="modal-mask" class="modal-mask" hidden>
+    <div class="modal">
+      <div class="modal-title" id="modal-title"></div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-actions">
+        <button class="ghost" id="modal-cancel">取消</button>
+        <button class="danger" id="modal-ok">确认</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 实例 ================= -->
+  <section id="page-instances">
+    <div class="card">
+      <h2>添加 Nexus 实例 <span class="hint">admin 凭据 AES-GCM 加密存储于数据目录，请保管好 secret.key</span></h2>
+      <div class="form-row">
+        <input type="text" id="inst-name" placeholder="名称，如 prod-nexus">
+        <input type="text" id="inst-url" placeholder="http://192.168.1.41:8081" style="flex:2">
+        <input type="text" id="inst-user" placeholder="admin" style="max-width:130px">
+        <input type="password" id="inst-pass" placeholder="密码" style="max-width:150px">
+        <button onclick="addInstance()">添加</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>实例列表</h2>
+      <table><thead><tr>
+        <th>ID</th><th>名称</th><th>地址</th><th>账号</th><th>连通性</th><th>操作</th>
+      </tr></thead><tbody id="inst-tbody"></tbody></table>
+    </div>
+  </section>
+
+  <!-- ================= 仓库（只读） ================= -->
+  <section id="page-repos" hidden>
+    <div class="card">
+      <h2>仓库列表 <span class="hint">从 Nexus 自动同步的只读清单——本工具不创建/修改仓库，只在 Nexus 已有仓库上分配权限</span></h2>
+      <div class="form-row" style="margin-bottom:12px">
+        <button onclick="refreshReposFromNexus()">从 Nexus 刷新</button>
+        <span class="muted" id="repo-count"></span>
+      </div>
+      <table><thead><tr>
+        <th>名称</th><th>格式</th><th>类型</th>
+      </tr></thead><tbody id="repo-tbody"></tbody></table>
+    </div>
+  </section>
+
+  <!-- ================= 用户 ================= -->
+  <section id="page-users" hidden>
+    <div class="card">
+      <h2>添加用户 <span class="hint">密码/角色/权限/启停状态的变更都先存本地，需到"同步下发"推送到 Nexus 才生效（Nexus 更新接口不接受密码字段，密码变更走删除重建）</span></h2>
+      <div class="form-row">
+        <input type="text" id="user-name" placeholder="用户名 dev-a">
+        <input type="email" id="user-email" placeholder="邮箱">
+        <input type="password" id="user-pass" placeholder="密码（从 Nexus 导入的用户可留空）" style="max-width:230px">
+        <button onclick="addUser()">添加</button>
+        <button class="ghost" onclick="importUsersFromNexus()">从 Nexus 导入用户</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>用户列表</h2>
+      <table><thead><tr>
+        <th>用户名</th><th>邮箱</th><th>状态</th><th>密码</th><th>操作</th>
+      </tr></thead><tbody id="user-tbody"></tbody></table>
+    </div>
+  </section>
+
+  <!-- ================= 权限管理（用户中心） ================= -->
+  <section id="page-perms" hidden>
+    <div class="perms-layout">
+      <div class="user-side">
+        <div class="card">
+          <h2 style="margin-bottom:8px">用户 <span class="hint" id="user-total"></span></h2>
+          <input type="text" id="user-search" placeholder="搜索用户…" style="width:100%"
+                 oninput="renderUserList()">
+          <div class="user-list" id="user-list"></div>
+        </div>
+      </div>
+      <div class="user-main">
+        <div class="card" id="perms-panel">
+          <h2>仓库权限 <span class="hint">左侧选择用户；支持筛选、批量授权、从其他用户复制——仓库再多也不用横向拖</span></h2>
+          <div id="perms-body"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 权限模板 ================= -->
+  <section id="page-templates" hidden>
+    <div class="card">
+      <h2>权限模板 <span class="hint">按 前缀 / 格式 / 显式列表 匹配仓库，一次定义批量套用到多个用户</span></h2>
+      <div class="tpl-grid">
+        <div>
+          <div class="form-row" style="margin-bottom:8px">
+            <input type="text" id="tpl-name" placeholder="模板名，如 team-a-upload">
+          </div>
+          <div class="form-row" style="margin-bottom:8px">
+            <span class="muted" style="width:44px">匹配</span>
+            <select id="tpl-match-type" onchange="onTplMatchTypeChange()">
+              <option value="prefix">仓库名前缀</option>
+              <option value="format">仓库格式</option>
+              <option value="explicit">显式仓库列表</option>
+            </select>
+            <span id="tpl-match-input-wrap" style="flex:1">
+              <input type="text" id="tpl-match-value" placeholder="如 maven-team-a-" style="width:100%">
+            </span>
+          </div>
+          <div class="form-row" style="margin-bottom:8px">
+            <span class="muted" style="width:44px">级别</span>
+            <select id="tpl-level">
+              <option value="ro">ro 只读</option>
+              <option value="upload" selected>upload 只读+上传</option>
+              <option value="full">full 读写+删除</option>
+            </select>
+            <span class="muted" id="tpl-match-preview" style="margin-left:8px"></span>
+          </div>
+          <div style="margin-bottom:8px">
+            <span class="muted">绑定用户（套用对象）：</span>
+            <div id="tpl-user-checks" class="form-row" style="margin-top:6px"></div>
+          </div>
+          <div class="form-row">
+            <button onclick="saveTemplate()" id="tpl-save-btn">保存模板</button>
+            <button class="ghost" onclick="resetTemplateForm()">重置</button>
+          </div>
+        </div>
+        <div class="warn-box" style="margin:0">
+          <b>模板怎么用？</b>
+          <ul>
+            <li><b>前缀</b>：如 <code>maven-team-a-</code> 一次匹配该团队全部仓库</li>
+            <li><b>格式</b>：如 <code>npm</code> 匹配所有 npm 仓库</li>
+            <li><b>显式列表</b>：逗号分隔精确指定</li>
+            <li>套用是<b>增量</b>的：只写入模板覆盖的仓库，不影响用户其他仓库权限</li>
+            <li>典型场景：新成员入职 → 建用户 → 套用团队模板 → 同步下发，三步完成</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>模板列表</h2>
+      <table><thead><tr>
+        <th>名称</th><th>匹配规则</th><th>级别</th><th>绑定用户</th><th>匹配预览</th><th>操作</th>
+      </tr></thead><tbody id="tpl-tbody"></tbody></table>
+    </div>
+  </section>
+
+  <!-- ================= 同步下发 ================= -->
+  <section id="page-sync" hidden>
+    <div class="card">
+      <h2>匿名访问</h2>
+      <div class="form-row">
+        <label><input type="radio" name="anon" value="1" onchange="setAnon(true)"> 开启</label>
+        <label style="margin-left:16px"><input type="radio" name="anon" value="0" onchange="setAnon(false)"> 关闭（无凭据访问全部 401）</label>
+        <span class="muted" id="anon-state" style="margin-left:10px"></span>
+      </div>
+    </div>
+    <div class="card">
+      <h2>同步下发 <span class="hint">所有修改只保存在本地；只有点"推送到 Nexus"才会真正改动 Nexus</span></h2>
+      <div class="form-row" style="margin-bottom:12px">
+        <button class="ghost" onclick="computeDiff()">预览差异（不修改 Nexus）</button>
+        <button class="btn-primary-lg" onclick="doApply(false)">推送到 Nexus</button>
+        <span class="sep" style="width:1px;height:20px;background:var(--border)"></span>
+        <label><input type="checkbox" id="del-users"> 删多余用户</label>
+        <label><input type="checkbox" id="del-roles"> 删多余自定义角色</label>
+        <button class="danger" onclick="doApply(true)">推送并清理</button>
+      </div>
+      <div id="sync-pending"></div>
+      <div id="sync-result"></div>
+    </div>
+  </section>
+
+  <!-- ================= 用户管理（平台账号，入口在右上角用户菜单） ================= -->
+  <section id="page-platform-users" hidden>
+    <div class="card">
+      <h2><span class="back-link" onclick="backFromPlatformUsers()">&#8592; 返回</span>平台用户管理 <span class="hint">平台自身账号，登录即可使用全部功能（不做权限分级）；注意与"Nexus 用户"区分——那是被管理的 Nexus 账号</span></h2>
+      <div class="form-row" style="margin-bottom:14px">
+        <input type="text" id="pu-name" placeholder="用户名" style="max-width:160px">
+        <input type="email" id="pu-email" placeholder="邮箱（选填）" style="max-width:220px">
+        <input type="password" id="pu-pass" placeholder="密码：8+位，含大小写/数字/特殊字符" style="max-width:260px">
+        <button onclick="addPlatformUser()">创建用户</button>
+      </div>
+      <table><thead><tr>
+        <th>ID</th><th>用户名</th><th>邮箱</th><th>状态</th><th>最近登录</th><th>创建时间</th><th>操作</th>
+      </tr></thead><tbody id="pu-tbody"></tbody></table>
+    </div>
+    <div class="card">
+      <h2>登录日志 <span class="hint">最近 200 条</span></h2>
+      <table><thead><tr>
+        <th>时间</th><th>用户名</th><th>来源 IP</th><th>结果</th><th>说明</th>
+      </tr></thead><tbody id="loginlog-tbody"></tbody></table>
+    </div>
+  </section>
+
+  <!-- ================= 审计 ================= -->
+  <section id="page-audit" hidden>
+    <div class="card">
+      <h2>审计日志 <span class="hint">最近 200 条</span></h2>
+      <table><thead><tr>
+        <th>时间</th><th>动作</th><th>对象</th><th>明细</th><th>结果</th>
+      </tr></thead><tbody id="audit-tbody"></tbody></table>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const LEVEL_LABEL = { '': '无', ro: 'ro', upload: 'upload', full: 'full' };
+const TOKEN_KEY = 'nexus-perm-token';
+let state = {
+  instances: [], repos: [], users: [], templates: [],
+  current: null, tab: 'instances',
+  selUser: null, selectedRepos: new Set(),
+  editingTpl: null,
+  me: null
+};
+
+function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
+
+async function api(path, method, body) {
+  const headers = { 'Content-Type': 'application/json' };
+  const token = getToken();
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const opt = { method: method || 'GET', headers };
+  if (body !== undefined) opt.body = JSON.stringify(body);
+  const resp = await fetch(path, opt);
+  if (resp.status === 401) {
+    // 登录过期/被禁用 -> 回到登录页
+    showLogin('登录已过期，请重新登录');
+    throw new Error('未登录');
+  }
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(data.error || ('HTTP ' + resp.status));
+  return data;
+}
+
+/* ================= 登录/登出 ================= */
+function showLogin(tip) {
+  document.body.classList.add('logged-out');
+  $('login-overlay').hidden = false;
+  const err = $('login-error');
+  if (tip) { err.textContent = tip; err.classList.add('show'); }
+  else err.classList.remove('show');
+  $('login-password').value = '';
+  $('login-username').focus();
+}
+function hideLogin() {
+  document.body.classList.remove('logged-out');
+  $('login-overlay').hidden = true;
+}
+async function checkAuth() {
+  const token = getToken();
+  if (!token) { showLogin(); return false; }
+  try {
+    const me = await api('/api/auth/me');
+    state.me = me;
+    applyUserChip(me);
+    hideLogin();
+    return true;
+  } catch (e) {
+    localStorage.removeItem(TOKEN_KEY);
+    showLogin();
+    return false;
+  }
+}
+function applyUserChip(me) {
+  $('user-chip').style.display = '';
+  $('current-username').textContent = me.username;
+  $('ud-username').textContent = me.username;
+  $('user-avatar').textContent = (me.username || '?').charAt(0).toUpperCase();
+}
+function toggleUserMenu(e) {
+  e.stopPropagation();
+  $('user-dropdown').hidden = !$('user-dropdown').hidden;
+}
+document.addEventListener('click', e => {
+  const dd = $('user-dropdown');
+  if (dd && !dd.hidden && !dd.contains(e.target) && e.target.id !== 'user-chip') dd.hidden = true;
+});
+// 平台用户管理：入口在右上角用户菜单，不属于 Nexus 业务页签
+function openPlatformUsers() {
+  $('user-dropdown').hidden = true;
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.remove('active'));
+  state.tab = 'platform-users';
+  ['instances', 'repos', 'users', 'perms', 'templates', 'sync', 'platform-users', 'audit'].forEach(t => {
+    $('page-' + t).hidden = (t !== state.tab);
+  });
+  loadPlatformUsers();
+}
+function backFromPlatformUsers() {
+  const prev = state.prevTab || 'instances';
+  const btn = document.querySelector(`#tabs button[data-tab="${prev}"]`);
+  if (btn) btn.click();
+}
+async function doLogin() {
+  const username = $('login-username').value.trim();
+  const password = $('login-password').value;
+  if (!username || !password) {
+    const err = $('login-error');
+    err.textContent = '请输入用户名和密码';
+    err.classList.add('show');
+    return;
+  }
+  const btn = $('login-btn');
+  btn.disabled = true; btn.textContent = '登录中…';
+  try {
+    const r = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, remember_me: $('login-remember').checked })
+    });
+    const data = await resp_json(r);
+    if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+    localStorage.setItem(TOKEN_KEY, data.token);
+    state.me = data.user;
+    applyUserChip(data.user);
+    hideLogin();
+    $('login-error').classList.remove('show');
+    refreshAll();
+  } catch (e) {
+    const err = $('login-error');
+    err.textContent = e.message;
+    err.classList.add('show');
+  } finally {
+    btn.disabled = false; btn.textContent = '登 录';
+  }
+}
+async function resp_json(resp) {
+  return resp.json().catch(() => ({}));
+}
+async function doLogout() {
+  try { await api('/api/auth/logout', 'POST', {}); } catch (e) { /* 忽略：token 可能已过期 */ }
+  localStorage.removeItem(TOKEN_KEY);
+  state.me = null;
+  state.current = null;
+  $('user-dropdown').hidden = true;
+  showLogin();
+}
+
+// 主题化单输入弹窗（替代原生 prompt）
+function showPrompt(title, label, placeholder, okText) {
+  return new Promise(resolve => {
+    $('modal-title').textContent = title;
+    $('modal-body').innerHTML = `<div class="prompt-modal-fields">
+      <input type="text" id="prompt-input" placeholder="${esc(placeholder || '')}">
+      <div class="pm-hint">${esc(label || '')}</div>
+    </div>`;
+    $('modal-ok').textContent = okText || '确认';
+    $('modal-ok').className = '';
+    $('modal-ok').style.background = 'var(--primary)';
+    $('modal-mask').hidden = false;
+    const input = $('prompt-input');
+    setTimeout(() => input.focus(), 50);
+    const done = v => {
+      $('modal-mask').hidden = true;
+      $('modal-ok').onclick = null;
+      $('modal-cancel').onclick = null;
+      resolve(v);
+    };
+    $('modal-ok').onclick = () => done(input.value.trim() || null);
+    $('modal-cancel').onclick = () => done(null);
+    input.onkeydown = ev => { if (ev.key === 'Enter') done(input.value.trim() || null); };
+  });
+}
+
+/* ================= 修改密码 ================= */
+function openChangePassword() {
+  $('modal-title').textContent = '修改密码';
+  $('modal-body').innerHTML = `<div class="pwd-modal-fields">
+    <input type="password" id="cp-old" placeholder="原密码">
+    <input type="password" id="cp-new" placeholder="新密码（8+位，含大小写/数字/特殊字符）">
+    <input type="password" id="cp-new2" placeholder="确认新密码">
+  </div>`;
+  $('modal-ok').textContent = '确认修改';
+  $('modal-ok').className = '';
+  $('modal-ok').style.background = 'var(--primary)';
+  $('modal-mask').hidden = false;
+  $('modal-ok').onclick = submitChangePassword;
+  $('modal-cancel').onclick = () => { $('modal-mask').hidden = true; };
+}
+async function submitChangePassword() {
+  const oldP = $('cp-old').value, newP = $('cp-new').value, new2 = $('cp-new2').value;
+  if (!oldP || !newP) { toast('请填写原密码和新密码', true); return; }
+  if (newP !== new2) { toast('两次输入的新密码不一致', true); return; }
+  try {
+    await api('/api/auth/password', 'PUT', { old_password: oldP, new_password: newP });
+    $('modal-mask').hidden = true;
+    toast('密码已修改，请重新登录');
+    setTimeout(doLogout, 800);
+  } catch (e) { toast(e.message, true); }
+}
+
+/* ================= 平台用户管理 ================= */
+async function loadPlatformUsers() {
+  const [usersData, logsData] = await Promise.all([
+    api('/api/platform-users'),
+    api('/api/login-logs')
+  ]);
+  const users = usersData.users || [];
+  $('pu-tbody').innerHTML = users.map(u => `<tr>
+    <td>${u.id}</td><td><b>${esc(u.username)}</b>${u.id === (state.me && state.me.id) ? ' <span class="badge">当前账号</span>' : ''}</td>
+    <td>${esc(u.email || '-')}</td>
+    <td>${u.enabled ? '<span class="dot on"></span> 启用' : '<span class="dot off"></span> 停用'}</td>
+    <td class="muted">${esc(u.last_login_at || '-')}</td>
+    <td class="muted">${esc((u.created_at || '').replace('T', ' ').substring(0, 19))}</td>
+    <td>
+      <button class="ghost small" onclick="resetPuPassword(${u.id}, '${esc(u.username).replace(/'/g, "\\'")}')">重置密码</button>
+      <button class="ghost small" onclick="togglePu(${u.id}, ${!u.enabled})">${u.enabled ? '停用' : '启用'}</button>
+      <button class="danger small" onclick="delPu(${u.id}, '${esc(u.username).replace(/'/g, "\\'")}')">删除</button>
+    </td></tr>`).join('') || '<tr><td colspan="7" class="empty">暂无用户</td></tr>';
+  $('loginlog-tbody').innerHTML = (logsData.logs || []).map(l => `<tr>
+    <td class="muted">${esc(l.ts)}</td><td>${esc(l.username)}</td><td class="muted">${esc(l.ip || '-')}</td>
+    <td><span class="chip ${l.result === 'success' ? 'upload' : 'full'}">${l.result === 'success' ? '成功' : '失败'}</span></td>
+    <td class="muted">${esc(l.detail)}</td>
+  </tr>`).join('') || '<tr><td colspan="5" class="empty">暂无日志</td></tr>';
+}
+async function addPlatformUser() {
+  const username = $('pu-name').value.trim();
+  const email = $('pu-email').value.trim();
+  const password = $('pu-pass').value;
+  if (!username || !password) { toast('请填写用户名和密码', true); return; }
+  try {
+    await api('/api/platform-users', 'POST', { username, email, password });
+    $('pu-name').value = $('pu-email').value = $('pu-pass').value = '';
+    await loadPlatformUsers(); toast('用户已创建');
+  } catch (e) { toast(e.message, true); }
+}
+async function togglePu(id, enabled) {
+  try {
+    await api('/api/platform-users/' + id, 'PUT', { enabled });
+    await loadPlatformUsers();
+  } catch (e) { toast(e.message, true); }
+}
+async function delPu(id, name) {
+  if (!await showConfirm('删除用户', `确认删除平台用户 ${name}？`, '删除')) return;
+  try {
+    await api('/api/platform-users/' + id, 'DELETE');
+    await loadPlatformUsers(); toast('用户已删除');
+  } catch (e) { toast(e.message, true); }
+}
+async function resetPuPassword(id, name) {
+  const p = await showPrompt('重置平台用户密码',
+    `设置 ${name} 的新密码（8+位，含大小写/数字/特殊字符）`, '输入新密码', '重置');
+  if (!p) return;
+  try {
+    await api('/api/platform-users/' + id + '/password', 'PUT', { new_password: p });
+    toast('密码已重置');
+  } catch (e) { toast(e.message, true); }
+}
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g,
+    ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+function toast(msg, isErr) {
+  const div = document.createElement('div');
+  div.className = isErr ? 'err-box' : 'ok-box';
+  div.textContent = msg;
+  div.style.cssText = 'position:fixed;top:70px;right:24px;z-index:99;max-width:430px;box-shadow:0 4px 16px rgba(0,0,0,.12)';
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), isErr ? 6000 : 2400);
+}
+
+// 页面内确认框：替代原生 confirm()——IDE 内嵌浏览器可能拦截原生对话框，
+// 表现为"点了按钮却没有任何反应"。
+function showConfirm(title, message, okText) {
+  return new Promise(resolve => {
+    $('modal-title').textContent = title;
+    $('modal-body').textContent = message;
+    $('modal-ok').textContent = okText || '确认';
+    $('modal-mask').hidden = false;
+    const done = v => {
+      $('modal-mask').hidden = true;
+      $('modal-ok').onclick = null;
+      $('modal-cancel').onclick = null;
+      $('modal-mask').onclick = null;
+      resolve(v);
+    };
+    $('modal-ok').onclick = () => done(true);
+    $('modal-cancel').onclick = () => done(false);
+    $('modal-mask').onclick = e => { if (e.target === $('modal-mask')) done(false); };
+  });
+}
+
+/* ================= 实例 ================= */
+async function loadInstances() {
+  const data = await api('/api/instances');
+  state.instances = data.instances || [];
+  const sel = $('instance-select');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— 选择 Nexus 实例 —</option>' +
+    state.instances.map(i => `<option value="${i.id}">${esc(i.name)}（${esc(i.base_url)}）</option>`).join('');
+  if (prev && state.instances.some(i => String(i.id) === prev)) sel.value = prev;
+  else if (state.current && state.instances.some(i => String(i.id) === String(state.current))) sel.value = String(state.current);
+  renderInstTable();
+  updateStatusLine();
+}
+function renderInstTable() {
+  $('inst-tbody').innerHTML = state.instances.map(i => `<tr>
+    <td>${i.id}</td><td><b>${esc(i.name)}</b></td><td>${esc(i.base_url)}</td><td>${esc(i.admin_user)}</td>
+    <td id="inst-test-${i.id}"><button class="ghost small" onclick="testInstance(${i.id})">测试</button></td>
+    <td>
+      <button class="small" onclick="selectInstance(${i.id})">管理</button>
+      <button class="danger small" onclick="delInstance(${i.id})">删除</button>
+    </td></tr>`).join('') || '<tr><td colspan="6" class="empty">暂无实例，请先添加</td></tr>';
+}
+async function addInstance() {
+  try {
+    await api('/api/instances', 'POST', {
+      name: $('inst-name').value.trim(), base_url: $('inst-url').value.trim(),
+      admin_user: $('inst-user').value.trim() || 'admin', admin_pass: $('inst-pass').value
+    });
+    $('inst-name').value = $('inst-url').value = $('inst-pass').value = '';
+    await loadInstances();
+    // 自动选中新实例并同步仓库清单、导入用户，开箱即用
+    const latest = state.instances[state.instances.length - 1];
+    if (latest) {
+      selectInstance(latest.id);
+      const r = await api('/api/repos/refresh?instance_id=' + latest.id, 'POST', {}).catch(e => null);
+      const u = await api('/api/users/import', 'POST', { instance_id: latest.id }).catch(e => null);
+      await loadRepos(); await loadUsers();
+      toast(`实例已添加：同步 ${r ? r.total : 0} 个仓库，导入 ${u ? u.imported_users : 0} 个用户`);
+    }
+  } catch (e) { toast(e.message, true); }
+}
+async function testInstance(id) {
+  const cell = $('inst-test-' + id);
+  cell.innerHTML = '<span class="muted">测试中…</span>';
+  try {
+    const r = await api(`/api/instances/${id}/test`, 'POST');
+    cell.innerHTML = r.ok
+      ? `<span class="dot on"></span> 连通${r.status && r.status.version ? ' · ' + esc(r.status.version) : ''}`
+      : `<span class="dot off"></span> ${esc(r.error || '失败')}`;
+  } catch (e) { cell.innerHTML = `<span class="dot off"></span> ${esc(e.message)}`; }
+}
+async function delInstance(id) {
+  if (!await showConfirm('删除实例', '确认删除该实例及其本地数据？（不会改动 Nexus）', '删除')) return;
+  await api('/api/instances/' + id, 'DELETE');
+  if (String(state.current) === String(id)) state.current = null;
+  await loadInstances(); refreshAll();
+}
+function selectInstance(id) { state.current = id; $('instance-select').value = id; updateStatusLine(); refreshAll(); }
+function updateStatusLine() {
+  const inst = state.instances.find(i => String(i.id) === String(state.current));
+  $('inst-status').innerHTML = inst
+    ? `<span class="dot on"></span> ${esc(inst.name)} · ${esc(inst.base_url)}`
+    : '未选择实例';
+}
+$('instance-select').onchange = e => {
+  state.current = e.target.value ? Number(e.target.value) : null;
+  state.selUser = null; state.selectedRepos.clear();
+  updateStatusLine(); refreshAll();
+};
+
+/* ================= 仓库（只读缓存） ================= */
+async function loadRepos() {
+  if (!state.current) { state.repos = []; renderRepos(); return; }
+  const data = await api('/api/repos?instance_id=' + state.current);
+  state.repos = data.repos || [];
+  renderRepos();
+}
+function renderRepos() {
+  $('repo-count').textContent = state.repos.length ? `共 ${state.repos.length} 个仓库` : '';
+  $('repo-tbody').innerHTML = state.repos.map(r => `<tr>
+    <td><b>${esc(r.name)}</b></td><td>${esc(r.format)}</td>
+    <td><span class="tag ${r.type}">${r.type}</span></td>
+  </tr>`).join('') || '<tr><td colspan="3" class="empty">暂无缓存，点上方"从 Nexus 刷新"获取仓库清单</td></tr>';
+}
+async function refreshReposFromNexus() {
+  if (!requireInstance()) return;
+  try {
+    const r = await api('/api/repos/refresh?instance_id=' + state.current, 'POST', {});
+    toast(`仓库列表已刷新：共 ${r.total} 个（新增 ${r.added}，移除 ${r.removed}）`);
+    await loadRepos(); if (state.tab === 'perms') loadPermsData();
+  } catch (e) { toast(e.message, true); }
+}
+async function importUsersFromNexus() {
+  if (!requireInstance()) return;
+  try {
+    const r = await api('/api/users/import', 'POST', { instance_id: state.current });
+    toast(`已导入 ${r.imported_users} 个 Nexus 用户`);
+    await loadUsers(); if (state.tab === 'perms') loadPermsData();
+  } catch (e) { toast(e.message, true); }
+}
+
+/* ================= 用户 ================= */
+async function loadUsers() {
+  if (!state.current) { state.users = []; renderUsers(); return; }
+  const data = await api('/api/users?instance_id=' + state.current);
+  state.users = data.users || [];
+  renderUsers();
+}
+function renderUsers() {
+  $('user-tbody').innerHTML = state.users.map(u => `<tr>
+    <td><b>${esc(u.username)}</b></td><td>${esc(u.email || '-')}</td>
+    <td>${u.enabled ? '<span class="dot on"></span> 启用' : '<span class="dot off"></span> 停用'}</td>
+    <td>${u.password_dirty ? '<span class="badge warn">已改，待同步</span>' : (u.password ? '<span class="badge">已保存</span>' : '<span class="muted">未知（导入）</span>')}</td>
+    <td>
+      <button class="ghost small" onclick="resetPass(${u.id})">改密码</button>
+      <button class="ghost small" onclick="toggleUser(${u.id}, ${!u.enabled})">${u.enabled ? '停用' : '启用'}</button>
+      <button class="danger small" onclick="delUser(${u.id})">删除</button>
+    </td></tr>`).join('') || '<tr><td colspan="5" class="empty">暂无用户</td></tr>';
+}
+async function addUser() {
+  if (!requireInstance()) return;
+  try {
+    await api('/api/users', 'POST', {
+      instance_id: state.current, username: $('user-name').value.trim(),
+      email: $('user-email').value.trim(), password: $('user-pass').value
+    });
+    $('user-name').value = $('user-email').value = $('user-pass').value = '';
+    await loadUsers(); if (state.tab === 'perms') loadPermsData();
+    toast('用户已添加');
+  } catch (e) { toast(e.message, true); }
+}
+async function resetPass(id) {
+  const u = state.users.find(x => x.id === id);
+  const p = await showPrompt('修改 Nexus 用户密码',
+    `将为 ${u ? u.username : ''} 设置新密码；需到"同步下发"推送到 Nexus 后才生效`,
+    '输入新密码', '保存');
+  if (!p) return;
+  await api('/api/users/' + id, 'PUT', { password: p });
+  await loadUsers();
+  toast(`密码已保存，到"同步下发"页推送到 Nexus 后生效`);
+}
+async function toggleUser(id, enabled) {
+  await api('/api/users/' + id, 'PUT', { enabled });
+  await loadUsers(); if (state.tab === 'perms') loadPermsData();
+}
+async function delUser(id) {
+  if (!await showConfirm('删除用户', '确认删除该用户？（其权限一并清除）', '删除')) return;
+  await api('/api/users/' + id, 'DELETE');
+  if (state.selUser === id) state.selUser = null;
+  await loadUsers(); if (state.tab === 'perms') loadPermsData();
+}
+
+/* ================= 权限管理（用户中心） ================= */
+async function loadPermsData() {
+  if (!state.current) {
+    $('user-list').innerHTML = '<div class="empty">请先选择实例</div>';
+    $('perms-body').innerHTML = '<div class="empty">请先选择实例</div>';
+    return;
+  }
+  const data = await api('/api/matrix?instance_id=' + state.current);
+  state.repos = data.repos || [];
+  state.users = data.users || [];
+  if (state.selUser && !state.users.some(u => u.id === state.selUser)) state.selUser = null;
+  if (!state.selUser && state.users.length) state.selUser = state.users[0].id;
+  state.selectedRepos.clear();
+  renderUserList();
+  renderPermsPanel();
+}
+function permCount(u) { return Object.keys(u.perms || {}).length; }
+function renderUserList() {
+  const kw = ($('user-search').value || '').trim().toLowerCase();
+  const list = state.users.filter(u => !kw || u.username.toLowerCase().includes(kw));
+  $('user-total').textContent = state.users.length ? `${state.users.length} 人` : '';
+  $('user-list').innerHTML = list.map(u => `
+    <div class="user-item ${u.id === state.selUser ? 'active' : ''}" onclick="selectUser(${u.id})">
+      <span class="nm">${esc(u.username)}</span>
+      <span class="cnt">${permCount(u)} 仓库</span>
+    </div>`).join('') || '<div class="empty" style="padding:16px 0">无匹配用户</div>';
+}
+function selectUser(id) { state.selUser = id; state.selectedRepos.clear(); renderUserList(); renderPermsPanel(); }
+function curUser() { return state.users.find(u => u.id === state.selUser); }
+
+function getPermFilters() {
+  return {
+    name: ($('perm-f-name') || {}).value || '',
+    format: ($('perm-f-format') || {}).value || '',
+    type: ($('perm-f-type') || {}).value || '',
+    level: ($('perm-f-level') || {}).value || ''
+  };
+}
+function filteredRepos(u) {
+  const f = getPermFilters();
+  const order = { hosted: 0, proxy: 1, group: 2 };
+  return state.repos.slice()
+    .sort((a, b) => (order[a.type] - order[b.type]) || a.name.localeCompare(b.name))
+    .filter(r =>
+      (!f.name || r.name.toLowerCase().includes(f.name.toLowerCase())) &&
+      (!f.format || r.format === f.format) &&
+      (!f.type || r.type === f.type) &&
+      (!f.level || (f.level === '__none' ? !u.perms[r.name] : (u.perms[r.name] || '') === f.level)));
+}
+function filterInput(el) {
+  state._focusId = el.id;
+  state._focusPos = el.selectionStart;
+  renderPermsPanel();
+}
+function restoreFocus() {
+  if (!state._focusId) return;
+  const el = $(state._focusId);
+  if (el) {
+    el.focus();
+    if (state._focusPos != null && el.setSelectionRange) {
+      try { el.setSelectionRange(state._focusPos, state._focusPos); } catch (e) { /* ignore */ }
+    }
+  }
+  state._focusId = null; state._focusPos = null;
+}
+
+function renderPermsPanel() {
+  const box = $('perms-body');
+  const u = curUser();
+  if (!u) {
+    box.innerHTML = '<div class="empty">' +
+      (state.users.length ? '请从左侧选择用户' : '暂无用户，请先在"用户"页添加，或从 Nexus 导入') + '</div>';
+    return;
+  }
+  // 摘要
+  const counts = { ro: 0, upload: 0, full: 0 };
+  for (const lv of Object.values(u.perms)) if (counts[lv] !== undefined) counts[lv]++;
+  const noneCount = state.repos.length - permCount(u);
+
+  // 筛选（从 DOM 恢复当前值，重渲染后保持）
+  const fName = ($('perm-f-name') || {}).value || '';
+  const fFmt = ($('perm-f-format') || {}).value || '';
+  const fType = ($('perm-f-type') || {}).value || '';
+  const fLevel = ($('perm-f-level') || {}).value || '';
+  const shown = filteredRepos(u);
+  const fmts = [...new Set(state.repos.map(r => r.format))].sort();
+  const otherUsers = state.users.filter(x => x.id !== u.id);
+
+  box.innerHTML = `
+    <div class="panel-head">
+      <span class="who">${esc(u.username)}</span>
+      <span class="muted">${esc(u.email || '')}</span>
+      <span style="flex:1"></span>
+      <select id="copy-from" style="max-width:150px">
+        <option value="">从其他用户复制…</option>
+        ${otherUsers.map(x => `<option value="${x.id}">${esc(x.username)}（${permCount(x)} 仓库）</option>`).join('')}
+      </select>
+      <button class="ghost small" onclick="copyFromUser()">复制权限</button>
+      <button class="ghost small" onclick="clearAllPerms()">清空权限</button>
+    </div>
+    <div class="summary">
+      <span class="chip upload">upload ${counts.upload}</span>
+      <span class="chip ro">ro ${counts.ro}</span>
+      <span class="chip full">full ${counts.full}</span>
+      <span class="chip none">未授权 ${noneCount}</span>
+      <span class="muted" style="align-self:center">/ 共 ${state.repos.length} 个仓库</span>
+    </div>
+    <div class="toolbar">
+      <input type="text" id="perm-f-name" placeholder="按仓库名筛选…" value="${esc(fName)}"
+             oninput="filterInput(this)" style="width:170px">
+      <select id="perm-f-format" onchange="renderPermsPanel()">
+        <option value="">全部格式</option>
+        ${fmts.map(f => `<option ${f === fFmt ? 'selected' : ''}>${esc(f)}</option>`).join('')}
+      </select>
+      <select id="perm-f-type" onchange="renderPermsPanel()">
+        <option value="">全部类型</option>
+        <option ${fType === 'hosted' ? 'selected' : ''}>hosted</option>
+        <option ${fType === 'proxy' ? 'selected' : ''}>proxy</option>
+        <option ${fType === 'group' ? 'selected' : ''}>group</option>
+      </select>
+      <select id="perm-f-level" onchange="renderPermsPanel()">
+        <option value="">全部级别</option>
+        <option value="ro" ${fLevel === 'ro' ? 'selected' : ''}>ro</option>
+        <option value="upload" ${fLevel === 'upload' ? 'selected' : ''}>upload</option>
+        <option value="full" ${fLevel === 'full' ? 'selected' : ''}>full</option>
+        <option value="__none" ${fLevel === '__none' ? 'selected' : ''}>未授权</option>
+      </select>
+      <span class="sep"></span>
+      <button class="ghost small" onclick="selectAllShown()">全选当前 ${shown.length} 项</button>
+      <button class="ghost small" onclick="state.selectedRepos.clear();renderPermsPanel()">取消选择</button>
+    </div>
+    <div class="batch-bar ${state.selectedRepos.size ? 'show' : ''}">
+      <b>已选 ${state.selectedRepos.size} 个仓库</b>
+      <span class="muted">批量设为：</span>
+      <button class="small lvl-ro" onclick="batchApply('ro')">ro 只读</button>
+      <button class="small lvl-upload" onclick="batchApply('upload')">upload 只读+上传</button>
+      <button class="small lvl-full" onclick="batchApply('full')">full 读写+删除</button>
+      <button class="ghost small" onclick="batchApply('')">清除授权</button>
+    </div>
+    <div class="repo-table">
+      <table><thead><tr>
+        <th style="width:30px"><input type="checkbox" onclick="toggleAllShown(this)" title="全选当前筛选"></th>
+        <th>仓库</th><th style="width:90px">格式</th><th style="width:80px">类型</th><th style="width:120px">权限级别</th>
+      </tr></thead><tbody>
+      ${shown.map(r => {
+        const lv = u.perms[r.name] || '';
+        const checked = state.selectedRepos.has(r.name) ? 'checked' : '';
+        return `<tr>
+          <td><input type="checkbox" ${checked} onclick="toggleRepo('${r.name.replace(/'/g, "\\'")}', this.checked)"></td>
+          <td><span class="repo-name">${esc(r.name)}</span></td>
+          <td class="muted">${esc(r.format)}</td>
+          <td><span class="tag ${r.type}">${r.type}</span></td>
+          <td><select onchange="setCellLevel(${u.id}, '${r.name.replace(/'/g, "\\'")}', this.value)">
+            <option value="" ${lv === '' ? 'selected' : ''}>无</option>
+            <option value="ro" ${lv === 'ro' ? 'selected' : ''}>ro</option>
+            <option value="upload" ${lv === 'upload' ? 'selected' : ''}>upload</option>
+            <option value="full" ${lv === 'full' ? 'selected' : ''}>full</option>
+          </select></td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="5" class="empty">没有符合筛选条件的仓库</td></tr>'}
+      </tbody></table>
+    </div>`;
+  restoreFocus();
+}
+async function setCellLevel(userId, repo, level) {
+  try {
+    await api('/api/matrix', 'PUT', { user_id: userId, repo: repo, level });
+    const u = curUser();
+    if (u) { if (level) u.perms[repo] = level; else delete u.perms[repo]; }
+    renderUserList();
+  } catch (e) { toast(e.message, true); }
+}
+function toggleRepo(repo, checked) {
+  if (checked) state.selectedRepos.add(repo); else state.selectedRepos.delete(repo);
+  renderPermsPanel();
+}
+function selectAllShown() {
+  const u = curUser(); if (!u) return;
+  filteredRepos(u).forEach(r => state.selectedRepos.add(r.name));
+  renderPermsPanel();
+}
+function toggleAllShown(cb) {
+  const u = curUser(); if (!u) return;
+  filteredRepos(u).forEach(r => {
+    if (cb.checked) state.selectedRepos.add(r.name); else state.selectedRepos.delete(r.name);
+  });
+  renderPermsPanel();
+}
+async function batchApply(level) {
+  const u = curUser(); if (!u || !state.selectedRepos.size) return;
+  const repos = [...state.selectedRepos];
+  try {
+    for (const repo of repos) {
+      await api('/api/matrix', 'PUT', { user_id: u.id, repo: repo, level });
+      if (level) u.perms[repo] = level; else delete u.perms[repo];
+    }
+    toast(`已批量设置 ${repos.length} 个仓库为 ${level || '无'}`);
+    state.selectedRepos.clear();
+    renderUserList(); renderPermsPanel();
+  } catch (e) { toast(e.message, true); }
+}
+async function copyFromUser() {
+  const u = curUser(); if (!u) return;
+  const srcId = Number($('copy-from').value);
+  const src = state.users.find(x => x.id === srcId);
+  if (!src) { toast('请先选择来源用户', true); return; }
+  if (!await showConfirm('复制权限', `把 ${src.username} 的 ${permCount(src)} 条仓库权限复制给 ${u.username}？将覆盖其现有权限。`, '复制')) return;
+  try {
+    for (const r of state.repos) {
+      const want = src.perms[r.name] || '';
+      const have = u.perms[r.name] || '';
+      if (want !== have) {
+        await api('/api/matrix', 'PUT', { user_id: u.id, repo: r.name, level: want });
+        if (want) u.perms[r.name] = want; else delete u.perms[r.name];
+      }
+    }
+    toast(`已复制 ${src.username} 的权限`);
+    renderUserList(); renderPermsPanel();
+  } catch (e) { toast(e.message, true); }
+}
+async function clearAllPerms() {
+  const u = curUser(); if (!u) return;
+  if (!permCount(u)) { toast('该用户本来就没有权限'); return; }
+  if (!await showConfirm('清空权限', `清空 ${u.username} 的全部仓库权限？此操作只改本地，需到"同步下发"推送到 Nexus 才生效。`, '清空')) return;
+  try {
+    for (const repo of Object.keys(u.perms)) {
+      await api('/api/matrix', 'PUT', { user_id: u.id, repo: repo, level: '' });
+      delete u.perms[repo];
+    }
+    toast('权限已清空');
+    renderUserList(); renderPermsPanel();
+  } catch (e) { toast(e.message, true); }
+}
+
+/* ================= 权限模板 ================= */
+async function loadTemplates() {
+  if (!state.current) { state.templates = []; renderTemplates(); renderTplUserChecks(); return; }
+  const data = await api('/api/templates?instance_id=' + state.current);
+  state.templates = data.templates || [];
+  renderTemplates(); renderTplUserChecks(); updateTplMatchPreview();
+}
+function renderTplUserChecks() {
+  $('tpl-user-checks').innerHTML = state.users.map(u => `
+    <label style="display:flex;align-items:center;gap:4px;font-size:13px">
+      <input type="checkbox" class="tpl-user-cb" value="${u.id}"
+        ${(state.editingTpl && state.editingTpl.user_ids || []).includes(u.id) ? 'checked' : ''}>
+      ${esc(u.username)}
+    </label>`).join('') || '<span class="muted">暂无用户</span>';
+}
+function onTplMatchTypeChange() {
+  const t = $('tpl-match-type').value;
+  const wrap = $('tpl-match-input-wrap');
+  if (t === 'format') {
+    const fmts = [...new Set(state.repos.map(r => r.format))].sort();
+    wrap.innerHTML = `<select id="tpl-match-value" style="width:100%" onchange="updateTplMatchPreview()">
+      ${fmts.map(f => `<option>${esc(f)}</option>`).join('') || '<option value="">（无仓库）</option>'}</select>`;
+  } else {
+    wrap.innerHTML = `<input type="text" id="tpl-match-value" style="width:100%"
+      placeholder="${t === 'prefix' ? '仓库名前缀，如 maven-team-a-' : '仓库名，逗号分隔'}"
+      oninput="updateTplMatchPreview()">`;
+  }
+  updateTplMatchPreview();
+}
+function tplMatchedNames() {
+  const t = $('tpl-match-type').value, v = ($('tpl-match-value') || {}).value || '';
+  const tmp = { match_type: t, match_value: v };
+  if (t === 'prefix') return state.repos.filter(r => v && r.name.startsWith(v)).map(r => r.name);
+  if (t === 'format') return state.repos.filter(r => r.format === v).map(r => r.name);
+  return v.split(',').map(s => s.trim()).filter(Boolean);
+}
+function updateTplMatchPreview() {
+  const names = tplMatchedNames();
+  $('tpl-match-preview').textContent = names.length
+    ? `匹配 ${names.length} 个仓库`
+    : '未匹配到仓库';
+}
+function renderTemplates() {
+  $('tpl-tbody').innerHTML = state.templates.map(t => {
+    const matched = t.match_type === 'prefix'
+      ? state.repos.filter(r => r.name.startsWith(t.match_value)).length
+      : t.match_type === 'format'
+        ? state.repos.filter(r => r.format === t.match_value).length
+        : t.match_value.split(',').filter(s => s.trim()).length;
+    const matchDesc = t.match_type === 'prefix' ? `前缀 <b>${esc(t.match_value)}</b>`
+      : t.match_type === 'format' ? `格式 <b>${esc(t.match_value)}</b>`
+        : `显式 <b>${esc(t.match_value)}</b>`;
+    return `<tr>
+      <td><b>${esc(t.name)}</b></td>
+      <td>${matchDesc}</td>
+      <td><span class="chip ${t.level}">${t.level}</span></td>
+      <td>${t.user_names.length ? t.user_names.map(n => `<span class="badge" style="margin:1px 2px">${esc(n)}</span>`).join('') : '<span class="muted">未绑定</span>'}</td>
+      <td><span class="count-badge">${matched} 仓库</span></td>
+      <td>
+        <button class="small" onclick="applyTemplate(${t.id}, '${esc(t.name).replace(/'/g, "\\'")}')">套用</button>
+        <button class="ghost small" onclick="editTemplate(${t.id})">编辑</button>
+        <button class="danger small" onclick="delTemplate(${t.id})">删除</button>
+      </td></tr>`;
+  }).join('') || '<tr><td colspan="6" class="empty">暂无模板，上方创建一个</td></tr>';
+}
+async function saveTemplate() {
+  if (!requireInstance()) return;
+  const name = $('tpl-name').value.trim();
+  const matchType = $('tpl-match-type').value;
+  const matchValue = ($('tpl-match-value') || {}).value || '';
+  const level = $('tpl-level').value;
+  const userIds = [...document.querySelectorAll('.tpl-user-cb:checked')].map(cb => Number(cb.value));
+  if (!name) { toast('请填写模板名', true); return; }
+  if (matchType !== 'explicit' && !matchValue) { toast('请填写匹配值', true); return; }
+  if (!userIds.length) { toast('请至少绑定一个用户', true); return; }
+  try {
+    await api('/api/templates', 'POST', {
+      instance_id: state.current, name, match_type: matchType,
+      match_value: matchValue, level, user_ids: userIds
+    });
+    toast(state.editingTpl ? '模板已更新' : '模板已创建');
+    resetTemplateForm();
+    await loadTemplates();
+  } catch (e) { toast(e.message, true); }
+}
+function editTemplate(id) {
+  const t = state.templates.find(x => x.id === id);
+  if (!t) return;
+  state.editingTpl = { id: t.id, name: t.name, user_ids: t.user_ids };
+  $('tpl-name').value = t.name;
+  $('tpl-match-type').value = t.match_type;
+  onTplMatchTypeChange();
+  const mv = $('tpl-match-value');
+  if (mv) mv.value = t.match_value;
+  $('tpl-level').value = t.level;
+  $('tpl-save-btn').textContent = '保存修改';
+  renderTplUserChecks();
+  updateTplMatchPreview();
+}
+function resetTemplateForm() {
+  state.editingTpl = null;
+  $('tpl-name').value = '';
+  $('tpl-match-type').value = 'prefix';
+  onTplMatchTypeChange();
+  $('tpl-level').value = 'upload';
+  $('tpl-save-btn').textContent = '保存模板';
+  renderTplUserChecks();
+}
+async function delTemplate(id) {
+  if (!await showConfirm('删除模板', '确认删除该模板？（不影响已写入的权限）', '删除')) return;
+  await api('/api/templates/' + id, 'DELETE');
+  await loadTemplates(); toast('模板已删除');
+}
+async function applyTemplate(id, name) {
+  try {
+    const r = await api(`/api/templates/${id}/apply`, 'POST', {});
+    toast(`模板「${name}」已套用：${r.matched_repos} 个仓库 × 用户 = ${r.applied_cells} 条权限`);
+    if (state.tab === 'perms') loadPermsData();
+    loadAudit();
+  } catch (e) { toast(e.message, true); }
+}
+
+/* ================= 同步 ================= */
+async function loadAnonState() {
+  if (!state.current) { $('anon-state').textContent = ''; return; }
+  try {
+    const r = await api('/api/settings/anonymous?instance_id=' + state.current);
+    document.getElementsByName('anon').forEach(r2 => r2.checked = (r2.value === '1') === !!r.enabled);
+    $('anon-state').textContent = r.enabled ? '当前：开启（任何人可匿名读取）' : '当前：关闭';
+  } catch (e) { /* 忽略 */ }
+}
+async function setAnon(enabled) {
+  if (!requireInstance()) { loadAnonState(); return; }
+  await api('/api/settings/anonymous', 'PUT', { instance_id: state.current, enabled });
+  await loadAnonState();
+  toast('匿名访问设置已保存（执行下发后生效）');
+}
+async function computeDiff() {
+  if (!requireInstance()) return;
+  const box = $('sync-result');
+  box.innerHTML = '<div class="muted">正在与 Nexus 对比…</div>';
+  try {
+    const d = await api('/api/sync/diff?instance_id=' + state.current);
+    renderPending(d);
+    let html = '';
+    if (d.warnings && d.warnings.length) {
+      html += '<div class="warn-box"><b>授权警告</b><ul>' +
+        d.warnings.map(w => `<li>${esc(w)}</li>`).join('') + '</ul></div>';
+    }
+    html += `<div class="card" style="box-shadow:none;border-style:dashed">
+      <h2>差异计划（${d.actions.length} 项）<span class="hint">以下是"将要发生"的变更，尚未推送</span></h2>` +
+      (d.actions.length ? d.actions.map(a => `<div class="action-item">
+        <div class="head">
+          <span class="kind">${esc(a.kind)}</span><span class="target">${esc(a.target)}</span>
+          <span class="detail">${esc(a.detail)}</span>
+        </div>
+        ${a.changes && a.changes.length ? `<div class="changes">` + a.changes.map(c => `
+          <div class="change-row">
+            <span class="ch-repo">${esc(c.repo)}</span>
+            <span class="chip ${c.from || 'none'}">${c.from || '无'}</span>
+            <span class="arrow">&#8594;</span>
+            <span class="chip ${c.to || 'none'}">${c.to || '无'}</span>
+          </div>`).join('') + `</div>` : ''}
+        ${a.removed_extra && a.removed_extra.length ? `<div class="extra-privs">
+          <b>注意：</b>该角色还有 ${a.removed_extra.length} 个非本工具管理的权限，PUT 完整列表时会被移除：<br>
+          ${a.removed_extra.map(esc).join('<br>')}
+        </div>` : ''}
+      </div>`).join('')
+        : '<div class="muted">本地状态与 Nexus 一致，无需变更</div>') + '</div>';
+    if (d.extras && d.extras.length) {
+      html += `<div class="card" style="box-shadow:none;border-style:dashed">
+        <h2>Nexus 上多出的对象（${d.extras.length} 个，默认保留）</h2>` +
+        d.extras.map(e => `<span class="badge" style="margin:2px 4px 2px 0">${esc(e.kind)}: ${esc(e.target)}</span>`).join('') + '</div>';
+    }
+    box.innerHTML = html;
+  } catch (e) {
+    box.innerHTML = `<div class="err-box">${esc(e.message)}</div>`;
+  }
+}
+function renderPending(d) {
+  const box = $('sync-pending');
+  if (d.actions && d.actions.length) {
+    const chCount = d.actions.reduce((s, a) => s + (a.changes ? a.changes.length : 0), 0);
+    const sub = chCount ? ` · 涉及 ${chCount} 个仓库授权变化` : '';
+    box.innerHTML = `<div class="pending-banner">
+      <div class="t">待推送 ${d.actions.length} 项变更到 Nexus</div>
+      <div class="d">${d.actions.map(a => esc(a.kind + ' ' + a.target)).join(' · ')}${sub}</div>
+      <div style="margin-top:10px">
+        <button class="btn-primary-lg" onclick="doApply(false)">立即推送到 Nexus</button>
+      </div>
+    </div>`;
+  } else {
+    box.innerHTML = '<div class="ok-box">本地状态与 Nexus 一致，没有待推送的变更</div>';
+  }
+}
+async function doApply(withDelete) {
+  if (!requireInstance()) return;
+  const ok = await showConfirm(
+    withDelete ? '推送并清理' : '推送到 Nexus',
+    withDelete
+      ? '将把本地权限状态下发到 Nexus，并删除上方勾选的多余对象。确认推送？'
+      : '将把本地权限状态下发到 Nexus（幂等，可重复执行）。确认推送？',
+    withDelete ? '确认推送并清理' : '确认推送');
+  if (!ok) return;
+  const box = $('sync-result');
+  box.innerHTML = '<div class="muted">正在推送到 Nexus…</div>';
+  try {
+    const r = await api('/api/sync/apply', 'POST', {
+      instance_id: state.current,
+      delete_extra_users: withDelete && $('del-users').checked,
+      delete_extra_roles: withDelete && $('del-roles').checked,
+    });
+    const results = r.results || [];
+    const fails = results.filter(x => !x.ok);
+    if (!results.length) {
+      box.innerHTML = '<div class="ok-box">已与 Nexus 对比：没有需要推送的变更</div>';
+      $('sync-pending').innerHTML = '<div class="ok-box">本地状态与 Nexus 一致，没有待推送的变更</div>';
+    } else if (fails.length) {
+      box.innerHTML = `<div class="err-box"><b>${fails.length} 项推送失败</b><br>${fails.map(f => esc(f.target + ' -> ' + f.err)).join('<br>')}</div>` +
+        renderResults(results);
+      $('sync-pending').innerHTML = '<div class="warn-box">推送未完全成功，请检查上方错误</div>';
+    } else {
+      box.innerHTML = `<div class="ok-box"><b>已成功推送 ${results.length} 项变更到 Nexus</b></div>` +
+        renderResults(results);
+      $('sync-pending').innerHTML = '<div class="ok-box">已推送完成，当前无待推送变更（可点"预览差异"复核）</div>';
+    }
+    loadAudit();
+  } catch (e) {
+    box.innerHTML = `<div class="err-box">${esc(e.message)}</div>`;
+  }
+}
+function renderResults(results) {
+  return '<div class="card" style="box-shadow:none;border-style:dashed"><h2>执行明细</h2>' +
+    results.map(x => `<div class="action-item">
+      <span class="kind">${esc(x.kind)}</span><span class="target">${esc(x.target)}</span>
+      <span class="detail" style="color:${x.ok ? '#065f46' : '#991b1b'}">${x.ok ? 'OK' : esc(x.err)}</span></div>`).join('') +
+    '</div>';
+}
+
+/* ================= 审计 ================= */
+async function loadAudit() {
+  const data = await api('/api/audit');
+  $('audit-tbody').innerHTML = (data.logs || []).map(l => `<tr>
+    <td class="muted">${esc(l.ts)}</td><td><span class="badge">${esc(l.action)}</span></td>
+    <td>${esc(l.target)}</td><td class="muted">${esc(l.detail)}</td>
+    <td style="color:${l.result.startsWith('FAIL') ? '#991b1b' : '#065f46'}">${esc(l.result)}</td>
+  </tr>`).join('') || '<tr><td colspan="5" class="empty">暂无日志</td></tr>';
+}
+
+/* ================= 通用 ================= */
+function requireInstance() {
+  if (!state.current) { toast('请先在顶部选择 Nexus 实例', true); return false; }
+  return true;
+}
+document.querySelectorAll('#tabs button').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('#tabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (state.tab !== 'platform-users') state.prevTab = state.tab;
+    state.tab = btn.dataset.tab;
+    ['instances', 'repos', 'users', 'perms', 'templates', 'sync', 'platform-users', 'audit'].forEach(t => {
+      $('page-' + t).hidden = (t !== state.tab);
+    });
+    refreshAll();
+  };
+});
+async function refreshAll() {
+  if (state.tab === 'repos') await loadRepos();
+  else if (state.tab === 'users') await loadUsers();
+  else if (state.tab === 'perms') await loadPermsData();
+  else if (state.tab === 'templates') { await loadUsers(); await loadTemplates(); }
+  else if (state.tab === 'platform-users') await loadPlatformUsers();
+  else if (state.tab === 'sync') { await loadAnonState(); computeDiff(); }
+  else if (state.tab === 'audit') await loadAudit();
+  else await loadInstances();
+}
+checkAuth();
+</script>
+</body>
+</html>
