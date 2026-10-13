@@ -13,8 +13,8 @@
 #
 # 触发方式：
 #   - 推送 v* 标签：构建并发布为对应版本号的 Release
-#   - 手动触发（workflow_dispatch）：构建后覆盖发布到固定 Release「latest」，
-#     使 /releases/latest/download/ 始终指向当前构建
+#   - 手动触发（workflow_dispatch）：构建后覆盖发布到固定 Release「rolling」
+#     （标记为 latest，/releases/latest/download/ 始终指向当前构建）
 #
 # 本地等价命令：
 #   CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
@@ -71,7 +71,9 @@ jobs:
       - name: 计算版本号
         id: version
         run: |
-          VERSION=$(git describe --tags --always 2>/dev/null || echo dev)
+          # 只认 v* 版本标签；没有则退化为 commit 短 SHA
+          # （不能用裸 git describe：滚动 Release 的 tag 会被误当成版本号）
+          VERSION=$(git describe --tags --always --match 'v*' 2>/dev/null || git rev-parse --short HEAD)
           BUILD_TIME=$(date -u '+%Y-%m-%d_%H:%M:%S')
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "build_time=${BUILD_TIME}" >> "$GITHUB_OUTPUT"
@@ -131,11 +133,13 @@ jobs:
           cat *.sha256 > SHA256SUMS
           ls -lh
 
-      # 标签推送 -> 版本号 Release；手动触发 -> 覆盖滚动 Release「latest」
+      # 标签推送 -> 版本号 Release；手动触发 -> 覆盖滚动 Release「rolling」。
+      # 注意 tag 不能叫 latest：会被 git describe 误当成版本号。
+      # /releases/latest/download/ 靠 --latest 标记生效，与 tag 名无关。
       - name: 发布 Release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}
+          TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'rolling' }}
         run: |
           NOTES="Nexus Repository Manager 3 权限管理平台 - 多平台构建产物。
 

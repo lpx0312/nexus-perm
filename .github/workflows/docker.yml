@@ -54,7 +54,9 @@ jobs:
       - name: 计算镜像版本号
         id: version
         run: |
-          VERSION=$(git describe --tags --always 2>/dev/null || echo "dev")
+          # 只认 v* 版本标签；没有则退化为 commit 短 SHA
+          # （不能用裸 git describe：滚动 Release 的 tag 会被误当成版本号）
+          VERSION=$(git describe --tags --always --match 'v*' 2>/dev/null || git rev-parse --short HEAD)
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "镜像版本: ${VERSION}"
 

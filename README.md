@@ -185,7 +185,7 @@ data/                    运行时生成：nexus-perm.db + secret.key + jwt.key
 | 工作流 | 触发条件 | 产物 |
 |---|---|---|
 | `docker.yml` | push 到 main / 推送 `v*` 标签 / 手动 | 多架构镜像推 GHCR：`ghcr.io/lpx0312/nexus-perm:latest` 与 `:<版本号>`（linux/amd64 + arm64） |
-| `release.yml` | 推送 `v*` 标签 / 手动 | 6 平台二进制 + sha256 校验和发布到 GitHub Releases（标签推送发版本号 Release，手动触发覆盖滚动 Release「latest」） |
+| `release.yml` | 推送 `v*` 标签 / 手动 | 6 平台二进制 + sha256 校验和发布到 GitHub Releases（标签推送发版本号 Release，手动触发覆盖滚动 Release「rolling」，`/releases/latest/download/` 始终可用） |
 
 ```bash
 # 手动触发（也可在 GitHub Actions 页面点 Run workflow）
