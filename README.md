@@ -10,7 +10,7 @@ Nexus Repository Manager 3 的仓库级权限可视化管理工具（前后端�
 
 ### 方式一：二进制（推荐）
 
-从 [Releases](https://github.com/lpx0312/nexus-perm/releases/latest) 下载对应平台的压缩包：
+从 [Releases](https://github.com/lpx0312/nexus-perm/releases) 下载对应版本的压缩包：
 
 | 平台 | 文件 |
 |---|---|
@@ -21,8 +21,8 @@ Nexus Repository Manager 3 的仓库级权限可视化管理工具（前后端�
 | Windows x64 | `nexus-perm-windows-amd64.zip` |
 
 ```bash
-# Linux / macOS 示例
-curl -LO https://github.com/lpx0312/nexus-perm/releases/latest/download/nexus-perm-linux-amd64.tar.gz
+# Linux / macOS 示例（版本号换成实际的，如 v1.0.0）
+curl -LO https://github.com/lpx0312/nexus-perm/releases/download/v1.0.0/nexus-perm-linux-amd64.tar.gz
 tar -xzf nexus-perm-linux-amd64.tar.gz
 chmod +x nexus-perm-linux-amd64
 ./nexus-perm-linux-amd64 -addr 0.0.0.0:8080 -data ./data
@@ -185,21 +185,20 @@ data/                    运行时生成：nexus-perm.db + secret.key + jwt.key
 | 工作流 | 触发条件 | 产物 |
 |---|---|---|
 | `docker.yml` | push 到 main / 推送 `v*` 标签 / 手动 | 多架构镜像推 GHCR：`ghcr.io/lpx0312/nexus-perm:latest` 与 `:<版本号>`（linux/amd64 + arm64） |
-| `release.yml` | 推送 `v*` 标签 / 手动 | 6 平台二进制 + sha256 校验和发布到 GitHub Releases（标签推送发版本号 Release，手动触发覆盖滚动 Release「rolling」，`/releases/latest/download/` 始终可用） |
+| `release.yml` | 推送 `v*` 标签 | 6 平台二进制 + sha256 校验和发布为对应版本号的 GitHub Release |
 
 ```bash
-# 手动触发（也可在 GitHub Actions 页面点 Run workflow）
-gh workflow run docker   --repo lpx0312/nexus-perm
-gh workflow run release  --repo lpx0312/nexus-perm
+# 手动触发镜像构建（也可在 GitHub Actions 页面点 Run workflow）
+gh workflow run docker --repo lpx0312/nexus-perm
 
 # 跟踪执行
 gh run watch --repo lpx0312/nexus-perm
 ```
 
-发版示例：
+发版（打版本标签，自动构建镜像 + 发布 Release）：
 
 ```bash
-git tag v1.0.0 && git push origin v1.0.0   # 自动构建镜像 + 版本 Release
+git tag v1.0.0 && git push origin v1.0.0
 ```
 
 ## 安全提示

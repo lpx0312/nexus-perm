@@ -12,9 +12,8 @@
 # 以及每个文件的 sha256 校验值；Windows 目标按惯例打包为 zip。
 #
 # 触发方式：
-#   - 推送 v* 标签：构建并发布为对应版本号的 Release
-#   - 手动触发（workflow_dispatch）：构建后覆盖发布到固定 Release「rolling」
-#     （标记为 latest，/releases/latest/download/ 始终指向当前构建）
+#   - 推送 v* 标签（如 v1.0.0）：构建并发布为对应版本号的 Release
+#     git tag v1.0.0 && git push origin v1.0.0
 #
 # 本地等价命令：
 #   CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
@@ -26,7 +25,6 @@ name: release
 on:
   push:
     tags: ['v*']
-  workflow_dispatch:
 
 # 同一引用重复触发时取消旧构建
 concurrency:
@@ -133,22 +131,20 @@ jobs:
           cat *.sha256 > SHA256SUMS
           ls -lh
 
-      # 标签推送 -> 版本号 Release；手动触发 -> 覆盖滚动 Release「rolling」。
-      # 注意 tag 不能叫 latest：会被 git describe 误当成版本号。
-      # /releases/latest/download/ 靠 --latest 标记生效，与 tag 名无关。
+      # 标签推送 -> 以标签名直接创建版本 Release
       - name: 发布 Release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'rolling' }}
+          TAG: ${{ github.ref_name }}
         run: |
-          NOTES="Nexus Repository Manager 3 权限管理平台 - 多平台构建产物。
+          NOTES="Nexus Repository Manager 3 权限管理平台 ${TAG} - 多平台构建产物。
 
-          来源：${GITHUB_SHA:0:7} / ${GITHUB_REF_NAME}
+          来源：${GITHUB_SHA:0:7}
 
           ## 快速开始（Linux amd64）
 
           \`\`\`bash
-          curl -LO https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/nexus-perm-linux-amd64.tar.gz
+          curl -LO https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/nexus-perm-linux-amd64.tar.gz
           tar -xzf nexus-perm-linux-amd64.tar.gz
           chmod +x nexus-perm-linux-amd64
           ./nexus-perm-linux-amd64 -addr 0.0.0.0:8080 -data ./data
@@ -158,18 +154,13 @@ jobs:
           Windows：下载 nexus-perm-windows-amd64.zip 解压得到 nexus-perm-windows-amd64.exe，
           重命名为 nexus-perm.exe 后双击或加入 PATH。
 
-          Docker：\`docker run -d -p 8080:8080 -v nexus-perm-data:/data ghcr.io/${GITHUB_REPOSITORY}:latest\`
+          Docker：\`docker run -d -p 8080:8080 -v nexus-perm-data:/data ghcr.io/${GITHUB_REPOSITORY}:${TAG}\`
 
           完整安装/配置说明见仓库 README.md。"
 
-          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$TAG" dist/*.tar.gz dist/*.zip dist/*.sha256 dist/SHA256SUMS --clobber --repo "$GITHUB_REPOSITORY"
-            gh release edit "$TAG" --latest --notes "$NOTES" --repo "$GITHUB_REPOSITORY"
-          else
-            gh release create "$TAG" \
-              --title "nexus-perm ${TAG}" \
-              --notes "$NOTES" \
-              --latest \
-              dist/*.tar.gz dist/*.zip dist/*.sha256 dist/SHA256SUMS \
-              --repo "$GITHUB_REPOSITORY"
-          fi
+          gh release create "$TAG" \
+            --title "nexus-perm ${TAG}" \
+            --notes "$NOTES" \
+            --latest \
+            dist/*.tar.gz dist/*.zip dist/*.sha256 dist/SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY"
