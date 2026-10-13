@@ -158,6 +158,20 @@ data/                    运行时生成：nexus-perm.db + secret.key + jwt.key
 | 用户管理 | **平台自身账号** CRUD + 登录日志（入口：右上角用户菜单） |
 | 审计日志 | 实例/仓库/用户/模板/矩阵/apply 全操作留痕 |
 
+## 界面预览
+
+| 登录页（打开即要求登录） | 权限管理（核心双栏编辑器） |
+| --- | --- |
+| ![登录](docs/screenshots/01-login.png) | ![权限管理](docs/screenshots/02-perms.png) |
+
+| 权限模板（按前缀/格式批量授权） | 同步下发（diff 预览 + 推送） |
+| --- | --- |
+| ![权限模板](docs/screenshots/03-templates.png) | ![同步下发](docs/screenshots/04-sync.png) |
+
+| 平台用户管理（右上角用户菜单入口） |
+| --- |
+| ![平台用户管理](docs/screenshots/05-platform-users.png) |
+
 ## 权限级别（Nexus 3.49 实测结论）
 
 | 级别 | Nexus 权限 | 说明 |
